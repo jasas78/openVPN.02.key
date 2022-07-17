@@ -21,16 +21,16 @@ endef
 
 define callFUNC2
 $1 : $($1)
-helpTEXT1+=    $1   -> $($1) -> $($($1))$$(EOL)
+helpTEXT2+=    $1   -> $($1) -> $($($1))$$(EOL)
 
 endef
 
 define callFUNC3
-$1 : $($1)
-helpTEXT1+=    $1   -> $($1)
-$($1) :
-    @echo
-    $($($1))
+helpTEXT3+=    $1   -> $($1)
+$1 :
+	@echo
+	$($1)
+
 endef
 
 PWD         := $(shell pwd)
@@ -51,8 +51,7 @@ all:
 	@echo " $${helpTEXT2}"
 
 
-m:
-	vim Makefile
+m:=vim Makefile
 	
 #
 #
@@ -99,7 +98,7 @@ gen_key101 :
 	ls -l keyS1/pki/ca.crt
 	md5sum keyS1/pki/ca.crt
 	mkdir -p keyS0
-	cp keyS1/pki/ca.crt keyS0/key101_ca.crt_`md5sum keyS1/pki/ca.crt|awk '{printf $$1}'`
+	cp keyS1/pki/ca.crt keyS0/key101_ca.crt_$(dateX1)_`md5sum keyS1/pki/ca.crt|awk '{printf $$1}'`
 	@echo grep . keyS1/pki/ca.crt
 
 k2:=key102
@@ -122,29 +121,29 @@ gen_key201:
 		&& echo && echo '$(key102) already exist. skip' \
 		&& ls -l         $(key102) $(key102x) $(key102y) && echo \
 		|| ( cd keyS1 && ../EasyRSA.now/easyrsa      build-server-full  $(serverName) nopass )
-	cp $(key102)  keyS0/key201_$(serverName).crt_`md5sum $(key102) |awk '{printf $$1}'`
-	cp $(key102x) keyS0/key201_$(serverName).key_`md5sum $(key102x)|awk '{printf $$1}'`
-	cp $(key102y) keyS0/key201_$(serverName).req_`md5sum $(key102y)|awk '{printf $$1}'`
+	cp $(key102)  keyS0/key201_$(serverName).crt_$(dateX1)_`md5sum $(key102) |awk '{printf $$1}'`
+	cp $(key102x) keyS0/key201_$(serverName).key_$(dateX1)_`md5sum $(key102x)|awk '{printf $$1}'`
+	cp $(key102y) keyS0/key201_$(serverName).req_$(dateX1)_`md5sum $(key102y)|awk '{printf $$1}'`
 
 c2:=clean_key201
 clean_key201:
 	rm -f $(wildcard $(key102) $(key102x) $(key102y))
 
 
+gs:= git status
+gc:= git commit -a
+ga:= git add .
 
 helpX1:=\
-	ep eb c2
+	ep eb c2 
 helpX2:=\
 	k1 k2
+helpX3:=\
+	m gs ga gc
 
 $(foreach aa1,$(helpX1),$(eval $(call callFUNC1,$(aa1))))
 $(foreach aa1,$(helpX2),$(eval $(call callFUNC2,$(aa1))))
+$(foreach aa1,$(helpX3),$(eval $(call callFUNC3,$(aa1))))
 export helpTEXT1
 export helpTEXT2
 
-gs:
-	git status
-gc:
-	git commit -a
-ga:
-	git add .
