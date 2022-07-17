@@ -87,6 +87,8 @@ key101 :
 		&& echo 'Already generated $($@), skip' \
 		&& echo 'If you want to regen, manually delete it.' && echo \
 		|| make gen_key101
+	test -L keyS0/_key101_ca.crt \
+		|| make gen_key101LN
 
 # https://community.openvpn.net/openvpn/wiki/EasyRSA3-OpenVPN-Howto#PKIprocedure:ProducingyourcompletePKIontheCAmachine
 gen_key101 :
@@ -97,37 +99,82 @@ gen_key101 :
 	cd keyS1 && ../EasyRSA.now/easyrsa      build-ca nopass     < answer01_yes.txt
 	ls -l keyS1/pki/ca.crt
 	md5sum keyS1/pki/ca.crt
+
+gen_key101LN:
 	mkdir -p keyS0
-	cp keyS1/pki/ca.crt keyS0/key101_ca.crt_$(dateX1)_`md5sum keyS1/pki/ca.crt|awk '{printf $$1}'`
+	cp keyS1/pki/ca.crt keyS0/key101_ca.crt_$(dateX1)_`md5sum keyS1/pki/ca.crt|awk '{printf $$1}'`.crt
+	rm -f keyS0/_key101_ca.crt
+	cd keyS0 && ln -s key101_ca.crt_$(dateX1)_`md5sum ../keyS1/pki/ca.crt|awk '{printf $$1}'`.crt  _key101_ca.crt
 	@echo grep . keyS1/pki/ca.crt
 
-k2:=key102
+k2:=key201
 serverName:=Eaafb_mp4_server
-key102:=keyS1/pki/issued/$(serverName).crt
-key102x:=keyS1/pki/private/$(serverName).key
-key102y:=keyS1/pki/reqs/$(serverName).req
-key102:
+key201:=keyS1/pki/issued/$(serverName).crt
+key201x:=keyS1/pki/private/$(serverName).key
+key201y:=keyS1/pki/reqs/$(serverName).req
+key201:
 	test -f EasyRSA.now/easyrsa || make easy-rsa_build
-	test -f $($@) \
-		&& echo \
-		&& echo 'Already generated $($@), skip' \
-		&& echo 'If you want to regen, manually delete it.' && echo \
-		&& ls -l         $(key102) $(key102x) $(key102y) && echo \
-		|| make gen_key201
+	make gen_$@
 gen_key201:
 	@echo ========= $@
 #	cd keyS1 && ../EasyRSA.now/easyrsa help build-server-full  
-	test -f $(key102) \
-		&& echo && echo '$(key102) already exist. skip' \
-		&& ls -l         $(key102) $(key102x) $(key102y) && echo \
+	test -f $(key201) \
+		&& echo && echo '$(key201) already exist. skip' \
+		&& ls -l         $(key201) $(key201x) $(key201y) && echo \
 		|| ( cd keyS1 && ../EasyRSA.now/easyrsa      build-server-full  $(serverName) nopass )
-	cp $(key102)  keyS0/key201_$(serverName).crt_$(dateX1)_`md5sum $(key102) |awk '{printf $$1}'`
-	cp $(key102x) keyS0/key201_$(serverName).key_$(dateX1)_`md5sum $(key102x)|awk '{printf $$1}'`
-	cp $(key102y) keyS0/key201_$(serverName).req_$(dateX1)_`md5sum $(key102y)|awk '{printf $$1}'`
+	cp  $(key201)  keyS0/key201_$(serverName).crt_$(dateX1)_`md5sum $(key201) |awk '{printf $$1}'`.crt
+	@cp $(key201x) keyS0/key201_$(serverName).key_$(dateX1)_`md5sum $(key201x)|awk '{printf $$1}'`.key
+	@cp $(key201y) keyS0/key201_$(serverName).req_$(dateX1)_`md5sum $(key201y)|awk '{printf $$1}'`.req
+	rm -f keyS0/_key201_$(serverName).crt keyS0/_key201_$(serverName).key keyS0/_key201_$(serverName).req 
+	cd keyS0  && ln -s  key201_$(serverName).crt_$(dateX1)_`md5sum ../$(key201)  |awk '{printf $$1}'`.crt _key201_$(serverName).crt
+	@cd keyS0 && ln -s  key201_$(serverName).key_$(dateX1)_`md5sum ../$(key201x) |awk '{printf $$1}'`.key _key201_$(serverName).key
+	@cd keyS0 && ln -s  key201_$(serverName).req_$(dateX1)_`md5sum ../$(key201y) |awk '{printf $$1}'`.req _key201_$(serverName).req
 
 c2:=clean_key201
 clean_key201:
-	rm -f $(wildcard $(key102) $(key102x) $(key102y))
+	rm -f $(wildcard $(key201) $(key201x) $(key201y))
+
+k3:=key301
+clientName:=Eaafb_mp4_client
+clientAmount:=3
+clientNameS:=$(foreach aa1,$(shell bb1=20;bb2=$$((20+$(clientAmount))); while [ $${bb1} -lt $${bb2} ] ; do \
+	echo $${bb1};bb1=$$(($${bb1}+1));done),$(clientName)_$(aa1))
+clientName1:=$(firstword $(clientNameS))
+$(iinfo clientNameS<$(clientNameS)>, [$(clientName1)] )
+
+key301:=keyS1/pki/issued/$(clientName1).crt
+key301N=keyS1/pki/issued/$(clientNameN).crt
+key301X=keyS1/pki/private/$(clientNameN).key
+key301Y=keyS1/pki/reqs/$(clientNameN).req
+
+key301:
+	test -f EasyRSA.now/easyrsa || make easy-rsa_build
+	$(foreach aa1,$(clientNameS), \
+		@make gen_$@ -e clientNameN=$(aa1) $(EOL))
+
+gen_key301:
+	@echo ========= $@
+#	cd keyS1 && ../EasyRSA.now/easyrsa help build-client-full  
+	test -f $(key301N) \
+		&& echo && echo '$(key301N) already exist. skip' \
+		&& ls -l         $(key301N) $(key301X) $(key301Y) && echo \
+		|| ( cd keyS1 && ../EasyRSA.now/easyrsa      build-client-full  $(clientNameN) nopass )
+	cp  $(key301N)  keyS0/key301_$(clientNameN).crt_$(dateX1)_`md5sum $(key301N) |awk '{printf $$1}'`.crt
+	@cp $(key301X)  keyS0/key301_$(clientNameN).key_$(dateX1)_`md5sum $(key301X) |awk '{printf $$1}'`.key
+	@cp $(key301Y)  keyS0/key301_$(clientNameN).req_$(dateX1)_`md5sum $(key301Y) |awk '{printf $$1}'`.req
+	rm -f \
+		keyS0/_key301_$(clientNameN).crt \
+		keyS0/_key301_$(clientNameN).key \
+		keyS0/_key301_$(clientNameN).req
+	cd keyS0  && ln -s  key301_$(clientNameN).crt_$(dateX1)_`md5sum ../$(key301N) |awk '{printf $$1}'`.crt _key301_$(clientNameN).crt
+	@cd keyS0 && ln -s  key301_$(clientNameN).key_$(dateX1)_`md5sum ../$(key301X) |awk '{printf $$1}'`.key _key301_$(clientNameN).key
+	@cd keyS0 && ln -s  key301_$(clientNameN).req_$(dateX1)_`md5sum ../$(key301Y) |awk '{printf $$1}'`.req _key301_$(clientNameN).req
+
+c3:=clean_key301
+clean_key301:
+	$(foreach aa1,$(clientNameS), @make clean_key301R -e clientNameN=$(aa1) $(EOL))
+clean_key301R:
+	rm -f $(wildcard $(key301N) $(key301X) $(key301Y) )
 
 
 gs:= git status
@@ -135,9 +182,9 @@ gc:= git commit -a
 ga:= git add .
 
 helpX1:=\
-	ep eb c2 
+	ep eb c2 c3
 helpX2:=\
-	k1 k2
+	k1 k2 k3
 helpX3:=\
 	m gs ga gc
 
