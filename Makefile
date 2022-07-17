@@ -58,6 +58,9 @@ m:=vim Makefile
 easy-rsa :
 	git clone https://github.com/OpenVPN/easy-rsa.git
 
+easy-tls : 
+	git clone https://github.com/TinCanTech/easy-tls.git
+
 ep:=easy-rsa_pull
 
 easy-rsa_pull : easy-rsa
@@ -78,10 +81,15 @@ easy-rsa_build : easy-rsa_pull
 		&& ln -s easy-rsa/dist-staging/unix/EasyRSA-$${easyRsaVERSION}/ EasyRSA.now \
 		&& EasyRSA.now/easyrsa --version
 
+eh:=easy-rsa_help
+easy-rsa_help:
+	@test -f EasyRSA.now/easyrsa || make easy-rsa_build
+	EasyRSA.now/easyrsa --help
+
 k1:=key101
 key101:=keyS1/pki/ca.crt
 key101 : 
-	test -f EasyRSA.now/easyrsa || make easy-rsa_build
+	@test -f EasyRSA.now/easyrsa || make easy-rsa_build
 	test -f $($@) \
 		&& echo \
 		&& echo 'Already generated $($@), skip' \
@@ -102,7 +110,7 @@ gen_key101 :
 
 gen_key101LN:
 	mkdir -p keyS0
-	cp keyS1/pki/ca.crt keyS0/key101_ca.crt_$(dateX1)_`md5sum keyS1/pki/ca.crt|awk '{printf $$1}'`.crt
+	cp $(key101) keyS0/key101_ca.crt_$(dateX1)_`md5sum keyS1/pki/ca.crt|awk '{printf $$1}'`.crt
 	rm -f keyS0/_key101_ca.crt
 	cd keyS0 && ln -s key101_ca.crt_$(dateX1)_`md5sum ../keyS1/pki/ca.crt|awk '{printf $$1}'`.crt  _key101_ca.crt
 	@echo grep . keyS1/pki/ca.crt
@@ -176,15 +184,52 @@ clean_key301:
 clean_key301R:
 	rm -f $(wildcard $(key301N) $(key301X) $(key301Y) )
 
+# https://community.openvpn.net/openvpn/wiki/EasyRSA3-OpenVPN-Howto#PKIprocedure:ProducingyourcompletePKIontheCAmachine
+t1:=tls01
+t1h:=tls01_help
+tls01:
+	-cd keyS1/ && ../easy-tls/easytls init
+	-cd keyS1/ && ../easy-tls/easytls rehash
+	-cd keyS1/ && PATH=/ov/sbin/:$${PATH} ../easy-tls/easytls build-tls-auth
+	-cd keyS1/ && PATH=/ov/sbin/:$${PATH} ../easy-tls/easytls build-tls-crypt
+	-cd keyS1/ && PATH=/ov/sbin/:$${PATH} ../easy-tls/easytls build-tls-crypt-v2-server  $(serverName)
+	$(foreach aa1,$(clientNameS), -cd keyS1/ \
+		&&        PATH=/ov/sbin/:$${PATH} ../easy-tls/easytls build-tls-crypt-v2-client  $(serverName) $(aa1) $(EOL))
+tls01_help:
+	cd keyS1/ && ../easy-tls/easytls help
+
+# https://community.openvpn.net/openvpn/wiki/EasyRSA3-OpenVPN-Howto
+
+k4:=key401_dh
+key401_dh:=keyS1/pki/dh.pem
+key401_dhX:=_key401_dh.pem
+key401_dh:
+	@test -f EasyRSA.now/easyrsa || make easy-rsa_build
+	test -f $($@) \
+		&& echo \
+		&& echo 'Already generated $($@), skip' \
+		&& echo 'If you want to regen, manually delete it.' && echo \
+		|| ( \
+		cd keyS1 && ../EasyRSA.now/easyrsa      gen-dh \
+		)
+	@test -L keyS0/$(key401_dhX) && ls -l keyS0/$(key401_dhX) \
+		|| make gen_key401DH
+gen_key401DH:
+	mkdir -p keyS0
+	cp $(key401_dh)   keyS0/key401_dh.pem_$(dateX1)_`md5sum keyS1/pki/dh.pem|awk '{printf $$1}'`.pem
+	rm -f keyS0/$(key401_dhX)
+	cd keyS0 && ln -s key401_dh.pem_$(dateX1)_`md5sum ../keyS1/pki/dh.pem|awk '{printf $$1}'`.pem  $(key401_dhX)
+
+
 
 gs:= git status
 gc:= git commit -a
 ga:= git add .
 
 helpX1:=\
-	ep eb c2 c3
+	ep eb c2 c3 t1 t1h eh 
 helpX2:=\
-	k1 k2 k3
+	k1 k2 k3 k4
 helpX3:=\
 	m gs ga gc
 
