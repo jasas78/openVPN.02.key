@@ -26,7 +26,7 @@ helpTEXT2+=    $1   -> $($1) -> $($($1))$$(EOL)
 endef
 
 define callFUNC3
-helpTEXT3+=    $1   -> $($1)
+helpTEXT3+=    $1   -> $($1)$$(EOL)
 $1 :
 	@echo
 	$($1)
@@ -49,6 +49,7 @@ uname_p:=$(shell uname -p)
 all:
 	@echo " $${helpTEXT1}"
 	@echo " $${helpTEXT2}"
+	@echo " $${helpTEXT3}"
 
 
 m:=vim Makefile
@@ -293,17 +294,19 @@ export server_conf
 gs:= git status
 gc:= git commit -a
 ga:= git add .
+up:= git push
 
 helpX1:=\
 	ep eb c2 c3 t1 t1h eh cs cc
 helpX2:=\
 	k1 k2 k3 k4
 helpX3:=\
-	m gs ga gc
+	m gs ga gc up
 
 $(foreach aa1,$(helpX1),$(eval $(call callFUNC1,$(aa1))))
 $(foreach aa1,$(helpX2),$(eval $(call callFUNC2,$(aa1))))
 $(foreach aa1,$(helpX3),$(eval $(call callFUNC3,$(aa1))))
 export helpTEXT1
 export helpTEXT2
+export helpTEXT3
 
