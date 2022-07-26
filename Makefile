@@ -293,15 +293,17 @@ export server_conf
 
 gs:= git status
 gc:= git commit -a
+gcX:= git commit -a -m '$(dateX1)'
 ga:= git add .
 up:= git push
+X:= make gcX up
 
 helpX1:=\
 	ep eb c2 c3 t1 t1h eh cs cc
 helpX2:=\
 	k1 k2 k3 k4
 helpX3:=\
-	m gs ga gc up
+	m gs ga gc gcX up X
 
 $(foreach aa1,$(helpX1),$(eval $(call callFUNC1,$(aa1))))
 $(foreach aa1,$(helpX2),$(eval $(call callFUNC2,$(aa1))))
