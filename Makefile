@@ -220,6 +220,74 @@ gen_key401DH:
 	rm -f keyS0/$(key401_dhX)
 	cd keyS0 && ln -s key401_dh.pem_$(dateX1)_`md5sum ../keyS1/pki/dh.pem|awk '{printf $$1}'`.pem  $(key401_dhX)
 
+cs:=copy_server_conf
+cc:=copy_client_conf
+
+copy_server_conf:=conf_server
+copy_server_confX:=$(copy_server_conf)/etc/openvpn/keys
+copy_server_conf:
+	rm -fr       $($@)/
+	mkdir -p     $($@X)/
+	chmod 750    $($@)/
+	cp	keyS0/_key101_ca.crt				$($@X)/ca.crt
+	cp 	keyS0/_key401_dh.pem                $($@X)/dh2048.pem
+	cp 	keyS0/_key201_$(serverName).crt  	$($@X)/$(serverName).crt
+	cp 	keyS0/_key201_$(serverName).key 	$($@X)/$(serverName).key
+	echo "$${server_conf}" >  $($@X)/../server.conf
+
+copy_client_conf:=conf_client
+copy_client_confX=$(copy_client_conf)/$(clientNameN)/etc/openvpn/keys
+copy_client_conf:
+	rm -fr       $($@)/
+	$(foreach aa1,$(clientNameS), @make copy_client_confR -e clientNameN=$(aa1) $(EOL))
+
+copy_client_confR:
+	mkdir -p     $(copy_client_confX)/
+	chmod 750    $(copy_client_conf)/$(clientNameN)/
+#	cp	keyS0/_key101_ca.crt				$(copy_client_confX)/ca.crt
+#	cp 	keyS0/_key401_dh.pem                $(copy_client_confX)/dh2048.pem
+	cp 	keyS0/_key301_$(clientNameN).crt  	$(copy_client_confX)/$(clientNameN).crt
+	cp 	keyS0/_key301_$(clientNameN).key 	$(copy_client_confX)/$(clientNameN).key
+
+vpn_port:=31194
+vpn_protocol:=tcp ### udp , tcp-server , tcp-client
+vpn_tun_ipv4:=172.16.162.0
+vpn_route_ip:=192.168.14.0
+serverDomain:=eaafb.com
+
+vpn_protocol:=$(strip $(vpn_protocol))
+ifeq ($(vpn_protocol),tcp)
+vpn_protocol_server:=tcp-server
+vpn_protocol_client:=tcp-client
+endif
+ifeq ($(vpn_protocol),udp)
+vpn_protocol_server:=udp
+vpn_protocol_client:=udp
+endif
+
+define server_conf
+port 			$(vpn_port)
+proto 			$(vpn_protocol_server)
+dev 			tun
+comp-lzo
+management 				127.0.0.1 			$(vpn_port)
+keepalive 				10 					120
+persist-key
+persist-tun
+ifconfig-pool-persist 	/tmp/openvpn-ipp.txt
+status 					/tmp/openvpn-status.$(serverName).log
+verb 					3
+server 					$(vpn_tun_ipv4) 	255.255.255.0
+push 	"route 			$(vpn_route_ip) 	255.255.255.0"
+push 	"dhcp-option 	DNS 				8.8.8.8"
+push 	"dhcp-option 	DOMAIN 				$(serverDomain)"
+ca 		/etc/openvpn/keys/ca.crt
+cert 	/etc/openvpn/keys/$(serverName).crt
+key 	/etc/openvpn/keys/$(serverName).key  # This file should be kept secret
+dh 		/etc/openvpn/keys/dh2048.pem
+
+endef
+export server_conf
 
 
 gs:= git status
@@ -227,7 +295,7 @@ gc:= git commit -a
 ga:= git add .
 
 helpX1:=\
-	ep eb c2 c3 t1 t1h eh 
+	ep eb c2 c3 t1 t1h eh cs cc
 helpX2:=\
 	k1 k2 k3 k4
 helpX3:=\
