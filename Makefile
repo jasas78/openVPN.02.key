@@ -226,7 +226,7 @@ csc:=copy_client_conf
 
 copy_server_conf:=conf_server
 copy_server_confX:=$(copy_server_conf)/etc/openvpn/keys
-copy_server_confY:=/ov/tmp/conf_server.conf
+copy_server_confY:=/ov/s/tmp/conf_server.conf
 copy_server_conf:
 	rm -fr       $($@)/
 	mkdir -p     $($@X)/
@@ -256,8 +256,9 @@ copy_client_confR:
 
 vpn_port:=32194
 vpn_protocol:=tcp ### udp , tcp-server , tcp-client
-vpn_tun_ipv4:=172.16.162.0
-vpn_route_ip:=192.168.14.0
+vpn_tun___:=192.168.162
+vpn_tun_NET:=$(vpn_tun___).0
+vpn_route_ip:=$(vpn_tun___).1
 serverDomain:=eaafb.com
 
 vpn_protocol:=$(strip $(vpn_protocol))
@@ -290,15 +291,13 @@ topology subnet
 
 
 comp-lzo
-#management 				127.0.0.1 			$(vpn_port)
-#keepalive 				10 					120
 persist-key
 persist-tun
 ifconfig-pool-persist 	/tmp/openvpn-ipp.txt
 status 					/tmp/openvpn-status.$(serverName).log
 verb 					3
-server 					$(vpn_tun_ipv4) 	255.255.255.0
-push 	"route 			$(vpn_route_ip) 	255.255.255.0"
+server 					$(vpn_tun_NET) 	255.255.255.0
+push 	"route 			$(vpn_tun_NET) 	255.255.255.0"
 push 	"dhcp-option 	DNS 				8.8.8.8"
 push 	"dhcp-option 	DOMAIN 				$(serverDomain)"
 
@@ -307,8 +306,8 @@ push 	"dhcp-option 	DOMAIN 				$(serverDomain)"
 script-security 2
 
 push "topology subnet"
-ifconfig 10.70.70.1 255.255.255.0
-push "route-gateway 10.70.70.1"
+ifconfig $(vpn_route_ip) 255.255.255.0
+push "route-gateway $(vpn_route_ip)"
 #ifconfig-pool 10.70.70.20 10.70.70.99 255.255.255.0
 #client-config-dir /home/bootH/OpenVZ/h2/etc/openvpn.server/ccd-dir
 client-to-client
