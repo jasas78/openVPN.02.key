@@ -226,6 +226,7 @@ cc:=copy_client_conf
 
 copy_server_conf:=conf_server
 copy_server_confX:=$(copy_server_conf)/etc/openvpn/keys
+copy_server_confY:=/ov/tmp/conf_server.conf
 copy_server_conf:
 	rm -fr       $($@)/
 	mkdir -p     $($@X)/
@@ -235,6 +236,9 @@ copy_server_conf:
 	cp 	keyS0/_key201_$(serverName).crt  	$($@X)/$(serverName).crt
 	cp 	keyS0/_key201_$(serverName).key 	$($@X)/$(serverName).key
 	echo "$${server_conf}" >  $($@X)/../server.conf
+	test ! -d `dirname $(copy_server_confY)` \
+		|| echo "$${server_conf}" >  $(copy_server_confY)
+
 
 copy_client_conf:=conf_client
 copy_client_confX=$(copy_client_conf)/$(clientNameN)/etc/openvpn/keys
@@ -250,7 +254,7 @@ copy_client_confR:
 	cp 	keyS0/_key301_$(clientNameN).crt  	$(copy_client_confX)/$(clientNameN).crt
 	cp 	keyS0/_key301_$(clientNameN).key 	$(copy_client_confX)/$(clientNameN).key
 
-vpn_port:=31194
+vpn_port:=32194
 vpn_protocol:=tcp ### udp , tcp-server , tcp-client
 vpn_tun_ipv4:=172.16.162.0
 vpn_route_ip:=192.168.14.0
@@ -267,12 +271,27 @@ vpn_protocol_client:=udp
 endif
 
 define server_conf
-port 			$(vpn_port)
+mode server
 proto 			$(vpn_protocol_server)
 dev 			tun
+lport 			$(vpn_port)
+
+tls-server
+ca 		/etc/openvpn/keys/ca.crt
+cert 	/etc/openvpn/keys/$(serverName).crt
+key 	/etc/openvpn/keys/$(serverName).key  # This file should be kept secret
+dh 		/etc/openvpn/keys/dh2048.pem
+
+#chroot /ch2
+chroot /
+
+topology subnet
+
+
+
 comp-lzo
-management 				127.0.0.1 			$(vpn_port)
-keepalive 				10 					120
+#management 				127.0.0.1 			$(vpn_port)
+#keepalive 				10 					120
 persist-key
 persist-tun
 ifconfig-pool-persist 	/tmp/openvpn-ipp.txt
@@ -282,13 +301,54 @@ server 					$(vpn_tun_ipv4) 	255.255.255.0
 push 	"route 			$(vpn_route_ip) 	255.255.255.0"
 push 	"dhcp-option 	DNS 				8.8.8.8"
 push 	"dhcp-option 	DOMAIN 				$(serverDomain)"
-ca 		/etc/openvpn/keys/ca.crt
-cert 	/etc/openvpn/keys/$(serverName).crt
-key 	/etc/openvpn/keys/$(serverName).key  # This file should be kept secret
-dh 		/etc/openvpn/keys/dh2048.pem
+
+#up /tmp/vpn_log/chroot_openvpn.dir/mtu.sh__1200.sh
+
+script-security 2
+
+push "topology subnet"
+ifconfig 10.70.70.1 255.255.255.0
+push "route-gateway 10.70.70.1"
+#ifconfig-pool 10.70.70.20 10.70.70.99 255.255.255.0
+#client-config-dir /home/bootH/OpenVZ/h2/etc/openvpn.server/ccd-dir
+client-to-client
+
+
+
+#server 10.70.70.0 255.255.255.0
+
+
+
+#ping 26
+#ping-restart 156
+keepalive 26 2006
+hand-window 132
+
+cipher AES-256-CBC
+data-ciphers AES-256-CBC
+auth sha256
+prng sha256
+
+#user nobody
+#user 65534
+#group nogroup
+
+persist-key
+persist-tun
+
+verb 3
+
 
 endef
 export server_conf
+
+# tun0: <POINTOPOINT,MULTICAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UNKNOWN group default qlen 500
+#    link/none
+#    inet 172.16.162.1/24 scope global tun0
+#       valid_lft forever preferred_lft forever
+#default via 192.168.14.1 dev eth0
+#172.16.162.0/24 dev tun0 proto kernel scope link src 172.16.162.1
+
 
 
 gs:= git status
