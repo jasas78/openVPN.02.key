@@ -221,8 +221,8 @@ gen_key401DH:
 	rm -f keyS0/$(key401_dhX)
 	cd keyS0 && ln -s key401_dh.pem_$(dateX1)_`md5sum ../keyS1/pki/dh.pem|awk '{printf $$1}'`.pem  $(key401_dhX)
 
-cs:=copy_server_conf
-cc:=copy_client_conf
+css:=copy_server_conf
+csc:=copy_client_conf
 
 copy_server_conf:=conf_server
 copy_server_confX:=$(copy_server_conf)/etc/openvpn/keys
@@ -359,7 +359,7 @@ up:= git push
 X:= make gcX up
 
 helpX1:=\
-	ep eb c2 c3 t1 t1h eh cs cc
+	ep eb c2 c3 t1 t1h eh css csc
 helpX2:=\
 	k1 k2 k3 k4
 helpX3:=\
