@@ -253,6 +253,9 @@ copy_client_confR:
 #	cp 	keyS0/_key401_dh.pem                $(copy_client_confX)/dh2048.pem
 	cp 	keyS0/_key301_$(clientNameN).crt  	$(copy_client_confX)/$(clientNameN).crt
 	cp 	keyS0/_key301_$(clientNameN).key 	$(copy_client_confX)/$(clientNameN).key
+	#echo "$${server_conf}" >  $($@X)/../server.conf
+	echo test ! -d `dirname $(copy_server_confY)` \
+		|| echo "$${server_conf}" >  $(copy_server_confY)
 
 vpn_port:=32194
 vpn_protocol:=tcp ### udp , tcp-server , tcp-client
